@@ -1,0 +1,1 @@
+docker run --rm --runtime=nvidia --gpus all --interactive --tty --volume=%cd%/../../models/openvoice:/model --volume=%cd%/training_data:/training_data --volume=%cd%/../../models/openvoice/embeddings:/output --volume=%cd%/main.py:/main.py voice_trainer:latest

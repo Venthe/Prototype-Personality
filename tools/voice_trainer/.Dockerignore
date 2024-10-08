@@ -1,0 +1,4 @@
+venv/
+output/
+training_data/
+packages/

@@ -1,0 +1,1 @@
+1. Install [miniconda](https://docs.anaconda.com/miniconda/)

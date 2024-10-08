@@ -1,0 +1,1 @@
+docker build . --tag=voice_trainer:latest

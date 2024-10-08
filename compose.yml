@@ -1,0 +1,29 @@
+services:
+  speech_recognition:
+    build:
+      context: services/speech_recognition
+    volumes:
+      - ./resources/models/whisper:/model
+    ports:
+      - 5000:5000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  text_to_speech:
+    build:
+      context: services/text_to_speech
+    volumes:
+      - ./resources/models/openvoice:/model
+    ports:
+      - 5001:5000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
