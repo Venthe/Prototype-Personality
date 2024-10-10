@@ -17,6 +17,7 @@ def setup_play_thread(text_to_speech_get):
     def play():
         print("Starting TTS loop")
         dlq = None
+        dlq2 = None
         while True:
             data = None
             if dlq is not None:
@@ -44,8 +45,17 @@ def setup_play_thread(text_to_speech_get):
                 
             except Exception as e:
                 print(e)
-                dlq = data
-                time.sleep(1)
+                if dlq2 == None and dlq != None:
+                    dlq2 = data
+                    dlq = data
+                    time.sleep(10)
+                elif dlq2 != None and dlq != None:
+                    dlq2 = None
+                    dlq = None
+                    logger.warn("Dropping")
+                else:
+                    dlq = data
+                    time.sleep(5)
 
     thread = threading.Thread(target=play, name="TTS")
     thread.daemon = True

@@ -27,3 +27,17 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+  # language_model:
+  #   build:
+  #     context: services/language_model
+  #   volumes:
+  #     - ./resources/models/Mistral-7B-Instruct-v0.3-GPTQ-4bit:/model
+  #   ports:
+  #     - 5002:5000
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]

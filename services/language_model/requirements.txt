@@ -1,0 +1,13 @@
+wheel
+numpy
+torch==2.4.1+cu124
+protobuf
+sentencepiece
+pillow
+flask
+configparser
+git+https://github.com/huggingface/optimum@2c0476eda1398b9a81cb966c817a460ed6e53413
+accelerate>=0.26.0
+git+https://github.com/huggingface/transformers@v4.45.2
+git+https://github.com/AutoGPTQ/AutoGPTQ@bd18bb8a92d73b930fbb7bee53fff58c2a3ebf13
+--extra-index-url https://download.pytorch.org/whl/cu124
