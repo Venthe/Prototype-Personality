@@ -1,7 +1,0 @@
-git+https://github.com/myshell-ai/OpenVoice.git@f3cf835540572ade1460c8952f39d53e4f7952df
-git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8
-torch==2.4.1+cu124
-torchaudio==2.4.1+cu124
-Flask
-ffmpeg-python
---extra-index-url https://download.pytorch.org/whl/cu124
