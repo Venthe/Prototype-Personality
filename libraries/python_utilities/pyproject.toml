@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "python-utilities"
+version = "0.1.0"
+description = ""
+authors = ["Jacek Lipiec <jacek.lipiec.bc@gmail.com>"]
+
+
+[[tool.poetry.packages]]
+include = "python_utilities"
+
+
+[tool.poetry.dependencies]
+python = "^3.10"
+configparser = "^7.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

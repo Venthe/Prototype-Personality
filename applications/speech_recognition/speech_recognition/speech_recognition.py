@@ -5,8 +5,10 @@ import logging
 import warnings
 import numpy
 from .config import SpeechRecognitionConfig
+from python_utilities.utilities import time_it
 
 class SpeechRecognition:
+    @time_it
     def __init__(self):
         print("Initiating model")
         self.logger = logging.getLogger(__name__)

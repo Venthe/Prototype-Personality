@@ -3,6 +3,7 @@ import numpy
 import base64
 from .config import SpeechRecognitionConfig
 from .speech_recognition import SpeechRecognition
+from python_utilities.logger import setup_logging
 
 
 port = SpeechRecognitionConfig().server.port()
@@ -33,8 +34,9 @@ def transcribe():
 
 
 def serve():
+    setup_logging()
     app.run(debug=debug, port=port, host=host)
 
 
 if __name__ == "__main__":
-   app.run(debug=debug, port=port, host=host)
+   serve()

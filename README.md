@@ -42,3 +42,6 @@ Per project:
 pyenv install 3.9.8
 pyenv local 3.9.8  # Activate Python 3.9 for the current project
 poetry install
+pyenv install --skip-existing
+pyenv local
+poetry install
