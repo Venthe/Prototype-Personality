@@ -6,23 +6,24 @@ authors = ["Jacek Lipiec <jacek.lipiec.bc@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "~3.11"
+python = "~3.10"
 openai-whisper = "20240930"
-torch = { version = "2.4.1+cu124", source = "pytorch-gpu" }
-torchaudio = { version = "2.4.1+cu124", source = "pytorch-gpu" }
+torch = { version = "2.4.1", source = "pytorch-gpu" }
+torchaudio = { version = "2.4.1", source = "pytorch-gpu" }
 numpy = "^2.0.2"
 Flask = "^3.0.3"
+python-config = {path = "../../libraries/python_config", develop = true}
 
 [[tool.poetry.packages]]
-include = "source"
+include = "speech_recognition"
 
 [[tool.poetry.source]]
 name = "pytorch-gpu"
 url = "https://download.pytorch.org/whl/cu124"
-priority = "supplemental"
+priority = "explicit"
 
 [tool.poetry.scripts]
-start = "source.main:main"
+serve = "speech_recognition.server:serve"
 
 [build-system]
 requires = ["poetry-core"]
