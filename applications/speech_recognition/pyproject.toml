@@ -21,5 +21,4 @@ build-backend = "poetry.core.masonry.api"
 [[tool.poetry.source]]
 name = "pytorch-gpu"
 url = "https://download.pytorch.org/whl/cu124"
-default = false
-secondary = true
+priority = "supplemental"
