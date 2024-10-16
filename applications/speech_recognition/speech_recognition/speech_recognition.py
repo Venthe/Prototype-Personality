@@ -3,8 +3,8 @@ import os
 import torch
 import logging
 import warnings
-import io
 import numpy
+from .config import SpeechRecognitionConfig
 
 class SpeechRecognition:
     def __init__(self):
@@ -25,7 +25,7 @@ class SpeechRecognition:
         self.config = {
             "cuda_enabled": self.detect_cuda(),
             "model_name": "medium.en",
-            "model_directory": "model",
+            "model_directory": SpeechRecognitionConfig().model.model_path(),
             "initial_prompt": "You are a british speaker, please transcribe this into English for me.",
         }
 
