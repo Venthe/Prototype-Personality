@@ -9,7 +9,7 @@ from python_utilities.cuda import detect_cuda
 
 
 class SpeechRecognition:
-    @time_it
+    @time_it()
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initiating model")
@@ -46,10 +46,10 @@ class SpeechRecognition:
         self.logger.info("Model initiated")
 
     # TODO: Add VAD to combat the hallucinations
-    @time_it
+    @time_it()
     def predict(self, buffer):
-        self.logger.info(f"Starting with the device {self.device}")
-        self.logger.info("Transcribing...")
+        self.logger.debug(f"Starting with the device {self.device}")
+        self.logger.debug("Transcribing...")
         fp16 = self.config["cuda_enabled"]
 
         sample = self.normalize_audio(
@@ -67,7 +67,7 @@ class SpeechRecognition:
             language="en",
         )
 
-        self.logger.debug(f"{result}")
+        self.logger.debug(f"Transcription done: {result}")
 
         r = []
         for segment in result["segments"]:
