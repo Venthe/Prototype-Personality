@@ -63,7 +63,7 @@ class SpeechRecognition:
         self.logger.debug("Transcribing...")
 
         transcription_output = self.model.transcribe(
-            self.normalize_audio(buffer),
+            numpy.squeeze(self.normalize_audio(buffer)),
             fp16=self.cuda_enabled,
             initial_prompt=initial_prompt,
             temperature=temperature,

@@ -89,7 +89,7 @@ class MicrophoneListener:
 
                 # TODO: Split very long audio files into smaller chunks
                 if sound_recognized_callback:
-                    sound_recognized_callback(numpy.squeeze(total_buffer))
+                    sound_recognized_callback(total_buffer)
 
                 total_buffer = numpy.empty((0, 1), dtype=numpy.float32)
                 current_buffer = numpy.empty((0, 1), dtype=numpy.float32)

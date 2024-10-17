@@ -13,6 +13,13 @@
 │   └───training_data     # Datasets for training
 
 
+## TODO
+
+### Speech recognition
+
+Faster whisper?
+Real time?
+
 ## Neuro capabilities
 
 u18:
