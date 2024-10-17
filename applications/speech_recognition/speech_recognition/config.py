@@ -1,37 +1,7 @@
 from python_config.config import Config
 from python_config.utilities import parse_bool
-import logging
+from python_utilities.utilities import map_log_level
 
-def map_log_level(log_level_str):
-    """
-    Map a string representation of a log level to the corresponding logging level.
-    
-    Args:
-        log_level_str (str): The string representation of the log level (e.g., 'DEBUG', 'info').
-    
-    Returns:
-        int: The corresponding logging level as an integer.
-    
-    Raises:
-        ValueError: If the input string does not correspond to a valid log level.
-    """
-    # Create a mapping of string representations to logging levels
-    log_levels = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL,
-    }
-
-    # Normalize the input string to upper case
-    normalized_level = log_level_str.upper()
-
-    # Retrieve and return the corresponding logging level
-    if normalized_level in log_levels:
-        return log_levels[normalized_level]
-    else:
-        raise ValueError(f"Invalid log level: '{log_level_str}'")
 
 
 class Server():
@@ -54,6 +24,24 @@ class Model():
     
     def model_path(self):
         return self.model.get("model_path")
+    
+    def model_name(self):
+        return self.model.get("model_name")
+    
+    def initial_prompt(self):
+        return self.model.get("initial_prompt")
+    
+    def use_gpu(self):
+        return parse_bool(self.model.get("use_gpu"))
+    
+    def temperature(self):
+        return float(self.model.get("temperature"))
+    
+    def hallucination_silence_threshold(self):
+        return float(self.model.get("hallucination_silence_threshold"))
+    
+    def language(self):
+        return self.model.get("language")
     
 
 class Default():

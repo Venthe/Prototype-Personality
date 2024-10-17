@@ -16,3 +16,34 @@ def time_it(log_level=logging.DEBUG):
         
         return wrapper
     return decorator
+
+def map_log_level(log_level_str):
+    """
+    Map a string representation of a log level to the corresponding logging level.
+    
+    Args:
+        log_level_str (str): The string representation of the log level (e.g., 'DEBUG', 'info').
+    
+    Returns:
+        int: The corresponding logging level as an integer.
+    
+    Raises:
+        ValueError: If the input string does not correspond to a valid log level.
+    """
+    # Create a mapping of string representations to logging levels
+    log_levels = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL,
+    }
+
+    # Normalize the input string to upper case
+    normalized_level = log_level_str.upper()
+
+    # Retrieve and return the corresponding logging level
+    if normalized_level in log_levels:
+        return log_levels[normalized_level]
+    else:
+        raise ValueError(f"Invalid log level: '{log_level_str}'")

@@ -9,10 +9,10 @@ class MicrophoneListener:
     def __init__(
         self,
         sample_rate=16000,
-        block_size=3000,
-        silence_threshold=0.005,
+        block_size=1500,
+        silence_threshold=0.007,
         input_device_index=None,
-        split_silence_duration_seconds=1,
+        split_silence_duration_seconds=0.8,
     ):
         self.logger = logging.getLogger(__name__)
         self.audio_queue = queue.Queue()
@@ -39,8 +39,6 @@ class MicrophoneListener:
         return sounddevice.query_devices()[input_device_index]['name']
 
     def listen(self, sound_recognized_callback=None):
-        self.logger.info(f"Listening to microphone {self.get_sound_device_name(self.input_device_index)}")
-
         total_buffer = numpy.empty((0, 1), dtype=numpy.float32)
         current_buffer = numpy.empty((0, 1), dtype=numpy.float32)
         last_silence_time = time.time()
@@ -54,6 +52,7 @@ class MicrophoneListener:
             blocksize=self.block_size,
             callback=self.audio_callback,
         ):
+            self.logger.info(f"Listening to microphone {self.get_sound_device_name(self.input_device_index)}")
             while True:
                 audio_data = self.audio_queue.get()
                 # We use the current buffer to not append unnecessary silence to the samples
@@ -90,7 +89,7 @@ class MicrophoneListener:
 
                 # TODO: Split very long audio files into smaller chunks
                 if sound_recognized_callback:
-                    sound_recognized_callback(total_buffer.copy())
+                    sound_recognized_callback(numpy.squeeze(total_buffer))
 
                 total_buffer = numpy.empty((0, 1), dtype=numpy.float32)
                 current_buffer = numpy.empty((0, 1), dtype=numpy.float32)

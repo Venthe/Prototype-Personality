@@ -6,7 +6,32 @@ from .config import SpeechRecognitionConfig
 import queue
 import logging
 import time
-from python_utilities.utilities import time_it
+
+
+def transcribe(logger, buffer_queue):
+    logger.info("Initializing transcription queue")
+    speech_recognition = SpeechRecognition()
+
+    while True:
+        buffer = buffer_queue.get()
+        prediction = speech_recognition.predict(buffer)
+        if len(prediction) > 0:
+            logger.info(f"Prediction: {prediction}")
+
+
+def listen_to_input_device(buffer_queue):
+    def receive_buffer(buffer):
+        buffer_queue.put(buffer)
+
+    listener = MicrophoneListener()
+    listener.listen(receive_buffer)
+
+
+def make_thread(target, name, args):
+    thread = threading.Thread(target=target, name=name, args=args)
+    thread.daemon = True
+    thread.start()
+
 
 def listen():
     setup_logging(SpeechRecognitionConfig().default.log_level())
@@ -14,32 +39,15 @@ def listen():
     logger = logging.getLogger(__name__)
     buffer_queue = queue.Queue()
 
-    def receive_buffer(buffer):
-        buffer_queue.put(buffer)
-
-    def transcribe():
-        logger.info("Initializing transcription queue")
-        speech_recognition = SpeechRecognition()
-
-        @time_it(logging.INFO)
-        def predict(buffer):
-            return speech_recognition.predict(buffer)
-
-        while True:
-            buffer = buffer_queue.get()
-            print(predict(buffer))
-
-    transcriber_thread = threading.Thread(target=transcribe, name="transcribe")
-    transcriber_thread.daemon = True
-    transcriber_thread.start()
-
-    def listen():
-        listener = MicrophoneListener()
-        listener.listen(receive_buffer)
-
-    listening_thread = threading.Thread(target=listen, name="listen")
-    listening_thread.daemon = True
-    listening_thread.start()
+    make_thread(
+        target=transcribe,
+        name="transcribe",
+        args=(
+            logger,
+            buffer_queue,
+        ),
+    )
+    make_thread(target=listen_to_input_device, name="listen", args=(buffer_queue,))
 
     while True:
         time.sleep(2)
