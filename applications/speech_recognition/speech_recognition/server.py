@@ -4,13 +4,13 @@ import base64
 from .config import SpeechRecognitionConfig
 from .speech_recognition import SpeechRecognition
 from python_utilities.logger import setup_logging
+import logging
 
 
 port = SpeechRecognitionConfig().server.port()
 host = SpeechRecognitionConfig().server.host()
 debug = SpeechRecognitionConfig().server.debug()
 
-model = SpeechRecognition()
 app = Flask(__name__)
 
 
@@ -34,9 +34,12 @@ def transcribe():
 
 
 def serve():
-    setup_logging()
+    setup_logging(SpeechRecognitionConfig().default.log_level())
+
+    global model
+    model = SpeechRecognition()
     app.run(debug=debug, port=port, host=host)
 
 
 if __name__ == "__main__":
-   serve()
+    serve()

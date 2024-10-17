@@ -14,6 +14,7 @@ numpy = "^2.0.2"
 Flask = "^3.0.3"
 python-config = {path = "../../libraries/python_config", develop = true}
 python-utilities = {path = "../../libraries/python_utilities", develop = true}
+python-sound-input = {path = "../../libraries/python_sound_input", develop = true}
 
 [[tool.poetry.packages]]
 include = "speech_recognition"
@@ -25,6 +26,7 @@ priority = "explicit"
 
 [tool.poetry.scripts]
 serve = "speech_recognition.server:serve"
+listen = "speech_recognition.cli:listen"
 
 [build-system]
 requires = ["poetry-core"]

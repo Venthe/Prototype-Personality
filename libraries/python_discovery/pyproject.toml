@@ -1,18 +1,18 @@
 [tool.poetry]
-name = "python-utilities"
+name = "python-discovery"
 version = "0.1.0"
 description = ""
 authors = ["Jacek Lipiec <jacek.lipiec.bc@gmail.com>"]
 
 
 [[tool.poetry.packages]]
-include = "python_utilities"
+include = "python_discovery"
 
 
 [tool.poetry.dependencies]
 python = "^3.10"
-configparser = "^7.1.0"
-torch = { version = "2.4.1", optional = true }
+etcd3 = "^0.12.0"
+psutil = "^6.0.0"
 
 
 [build-system]

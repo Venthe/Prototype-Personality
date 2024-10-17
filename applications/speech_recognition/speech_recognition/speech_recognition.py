@@ -1,17 +1,18 @@
 import whisper
 import os
-import torch
 import logging
 import warnings
 import numpy
 from .config import SpeechRecognitionConfig
 from python_utilities.utilities import time_it
+from python_utilities.cuda import detect_cuda
+
 
 class SpeechRecognition:
     @time_it
     def __init__(self):
-        print("Initiating model")
         self.logger = logging.getLogger(__name__)
+        self.logger.info("Initiating model")
         warnings.filterwarnings(
             "ignore",
             category=FutureWarning,
@@ -25,7 +26,7 @@ class SpeechRecognition:
 
         # Configuration Variables
         self.config = {
-            "cuda_enabled": self.detect_cuda(),
+            "cuda_enabled": detect_cuda(),
             "model_name": "medium.en",
             "model_directory": SpeechRecognitionConfig().model.model_path(),
             "initial_prompt": "You are a british speaker, please transcribe this into English for me.",
@@ -42,18 +43,10 @@ class SpeechRecognition:
             download_root=self.config["model_directory"],
             device=self.device,
         )
-        print("Model initiated")
-
-    def detect_cuda(self):
-        if torch.cuda.is_available():
-            self.logger.debug("CUDA is available.")
-            self.logger.debug(f"Current CUDA device: {torch.cuda.get_device_name(0)}")
-            return True
-        else:
-            self.logger.debug("CUDA is not available.")
-            return False
+        self.logger.info("Model initiated")
 
     # TODO: Add VAD to combat the hallucinations
+    @time_it
     def predict(self, buffer):
         self.logger.info(f"Starting with the device {self.device}")
         self.logger.info("Transcribing...")
@@ -85,7 +78,7 @@ class SpeechRecognition:
                 self.logger.info("Speech not recognized")
                 continue
 
-            r.append({"text": text, "probability": no_speech_prob})
+            r.append({"text": text, "probability": 1 - no_speech_prob})
         return r
 
     def pad_buffer(self, buffer, duration=0.1, noise=True):
