@@ -99,18 +99,6 @@ class TextToSpeech:
                 return data[key]
         raise KeyError(f"No matching key suffix found for '{text}'")
 
-    def write(self, file, data, samplerate, subtype=None, endian=None, format=None,
-            closefd=True):
-        data = numpy.asarray(data)
-        if data.ndim == 1:
-            channels = 1
-        else:
-            channels = data.shape[1]
-        with soundfile.SoundFile(file, 'w', samplerate, channels,
-                    subtype, endian, format, closefd) as f:
-            f.write(data)
-            return f
-
     def to_soundfile(self, audio_data, sampling_rate=44100):
         audio_buffer = io.BytesIO()
         soundfile.write(audio_buffer, audio_data, sampling_rate, format="WAV")
