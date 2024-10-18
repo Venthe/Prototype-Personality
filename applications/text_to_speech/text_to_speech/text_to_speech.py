@@ -41,12 +41,14 @@ class TextToSpeech:
         # TODO: Allow the option to pick the proper device
         self.__device = "cuda:0" if self.__config.use_gpu() and detect_cuda() else "cpu"
 
-        self.__text_to_speech = self.__init_text_to_speech()
+        self.__text_to_speech = None
         self.__tone_convert = None
         self.__tone_converter = None
         self.__tone_converter_sampling_rate = None
 
     def setup_prediction(self):
+        if self.__text_to_speech is None:
+            self.__text_to_speech = self.__init_text_to_speech()
         if self.__tone_converter is None:
             self.__init_tone_converter()
         if self.__tone_convert is None:
@@ -75,18 +77,19 @@ class TextToSpeech:
 
         def tone_convert(audio):
             return self.__tone_converter.convert(
-                audio_src_path=audio, src_se=speaker_model, tgt_se=embedding_checkpoint
+                audio_src_path=audio,
+                src_se=speaker_model,
+                tgt_se=embedding_checkpoint,
+                tau=0.2,
             )
 
         self.__tone_convert = tone_convert
 
     def train_embedding(
-        self, reference_file, target_dir="./output", use_vad=True, clean=True
+        self, reference_file, target_dir="./output", use_vad=True, name="se"
     ):
         if self.__tone_converter is None:
             raise BaseException("Tone converter is not yet created")
-
-        self.__check_and_clean_directory(target_dir, clean)
 
         target_se, audio_name = se_extractor.get_se(
             audio_path=reference_file,
@@ -99,30 +102,18 @@ class TextToSpeech:
         for item in os.listdir(generated_directory):
             if item == "wavs":
                 continue
-            item_path = os.path.join(target_dir, audio_name, item)
+            filename = item
+            item_path = os.path.join(target_dir, audio_name, filename)
+            if item.endswith(".pth"):
+                filename = f"{name}.pth"
+                os.rename(
+                    os.path.join(target_dir, audio_name, item),
+                    os.path.join(target_dir, audio_name, filename),
+                )
+                item_path = os.path.join(target_dir, audio_name, filename)
             shutil.move(item_path, target_dir)
 
         shutil.rmtree(generated_directory, ignore_errors=True)
-
-        return os.path.join(target_dir, "se.pth")
-
-    def __check_and_clean_directory(self, directory, clean=False):
-        # Check if the directory exists
-        if not os.path.exists(directory):
-            raise ValueError("The specified directory does not exist.")
-
-        # Check if the directory is empty
-        if not os.listdir(directory):  # The directory is empty
-            return True
-
-        # The directory is not empty
-        if clean:
-            # Clean the directory by removing all contents
-            shutil.rmtree(directory)
-            os.makedirs(directory)  # Recreate the directory after cleaning
-            return True
-        else:
-            raise ValueError("The directory is not empty.")
 
     def __init_text_to_speech(self):
         try:
@@ -188,20 +179,21 @@ class TextToSpeech:
             audio_data, orig_sr=original_sampling_rate, target_sr=target_sr
         )
 
-        return (self.__to_soundfile(resampled_audio, target_sr))
+        return self.__to_soundfile(resampled_audio, target_sr)
 
     def convert(self, text, speed=1.0):
         audio_data, sampling_rate = self.__text_to_speech(text, speed=speed)
-        
+        result, sampling_rate = self.__to_soundfile(
+            audio_data, sampling_rate=sampling_rate
+        )
+
         if self.__tone_convert is not None:
-            result, sampling_rate = self.__to_soundfile(audio_data, sampling_rate=sampling_rate)
             result, sampling_rate = self.__resample_audio(
                 result, self.__tone_converter_sampling_rate
             )
+            tc = self.__tone_convert(result)
             result, sampling_rate = self.__to_soundfile(
-                self.__tone_convert(result), self.__tone_converter_sampling_rate
+                tc, self.__tone_converter_sampling_rate
             )
-        else:
-            result, sampling_rate = self.__to_soundfile(audio_data, sampling_rate=sampling_rate)
         sound_file, _ = soundfile.read(result)
         return (sound_file, sampling_rate)

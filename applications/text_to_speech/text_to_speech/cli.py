@@ -9,9 +9,9 @@ def speak():
 
     tts = TextToSpeech()
     tts.setup_training()
-    print(tts.train_embedding("../../resources/training_data/reference.mp3", "../../resources/models/openvoice/embeddings"))
+    print(tts.train_embedding("../../resources/training_data/tracer.mp3", "../../resources/models/openvoice/embeddings", name="tracer"))
     tts.setup_prediction()
 
-    wav, sampling_rate = tts.convert("Cheese is here", speed=0.9)
+    wav, sampling_rate = tts.convert("Cheese is here. What do you want to say, love?")
     sounddevice.play(wav, sampling_rate)
     sounddevice.wait()
