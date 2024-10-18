@@ -23,7 +23,7 @@ class SpeechRecognition:
         )
 
         # Configuration
-        self.config = SpeechRecognitionConfig().model
+        self.config = SpeechRecognitionConfig().whisper
         self.cuda_enabled = self.config.use_gpu() and detect_cuda()
         # TODO: Allow the option to pick the proper device
         self.device = "cuda:0" if self.cuda_enabled else "cpu"

@@ -1,78 +1,118 @@
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message="`resume_download` is deprecated and will be removed in version 1.0.0.",
+)
+
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message="You are using `torch.load` with `weights_only=False`",
+)
+
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message="`torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`",
+)
+
 import os
 import torch
+import logging
 from openvoice.api import ToneColorConverter
 from melo.api import TTS
-from datetime import datetime
-import time
-import io
-from flask import Flask, request, send_file
-import ffmpeg
-import nltk
+from .config import TextToSpeechConfig
+from python_utilities.cuda import detect_cuda
+import soundfile
 
 
-def setup():
-    nltk.download('averaged_perceptron_tagger')
-    nltk.download('averaged_perceptron_tagger_eng')
-    nltk.download('cmudict')
+class TextToSpeech:
+    def __init__(self):
 
-def convert_wav_to_mp3_memory(wav_file_path):
-    """Convert a WAV file to MP3 and output to a memory buffer."""
-    mem_file = io.BytesIO()
-    process = (
-        ffmpeg
-        .input(wav_file_path)
-        .output('pipe:', format='mp3')  # Output to pipe with MP3 format
-        .run(capture_stdout=True, capture_stderr=True)
-    )
-    mem_file.write(process[0])
-    mem_file.seek(0)
+        self.logger = logging.getLogger(__name__)
+        self.config = TextToSpeechConfig().openvoice
+        self.cuda_enabled = self.config.use_gpu() and detect_cuda()
+        # TODO: Allow the option to pick the proper device
+        self.device = "cuda:0" if self.cuda_enabled else "cpu"
 
-    return mem_file
+        self.text_to_speech = self.init_text_to_speech()
+        self.tone_convert = self.init_tone_converter()
 
-config = {
-    "device": "gpu",
-    "openvoice_converter_path": "model/converter",
-    "openvoice_base_speakers_path": "model/base_speakers",
-    "embedding_file": "model/embeddings/se.pth",
-    "speaker_language": "EN",
-    "speed": 1.0,
-    "temp_dir": "output"
-}
-
-def prepare_model():
-    print("Preparing model")
-    def get_speaker_key(tts_model):
+    def init_text_to_speech(self):
+        tts_model = TTS(
+            language=self.config.language_model().upper(), device=self.device
+        )
         speaker_ids = tts_model.hps.data.spk2id
-        speaker_key = "EN-Default"
-        speaker_id = speaker_ids[speaker_key]
-        return speaker_key.lower().replace("_", "-"), speaker_id
+        self.logger.debug(f"Available speakers: {speaker_ids}")
+        speaker_id = self.get_value_from_suffix(speaker_ids, self.config.speaker_key())
 
-    openvoice_converter_checkpoint_config_file = f"{config['openvoice_converter_path']}/config.json"
-    openvoice_converter_checkpoint_file = f"{config['openvoice_converter_path']}/checkpoint.pth"
-    openvoice_embedding_file = f"{config['embedding_file']}"
+        def text_to_speech(text, speed=1.0):
+            return tts_model.tts_to_file(text, speed=speed, speaker_id=speaker_id)
 
-    device = "cuda:0" if torch.cuda.is_available() and config["device"] == "gpu" else "cpu"
-    
-    os.makedirs(config["temp_dir"], exist_ok=True)
+        return text_to_speech
 
-    tts_model = TTS(language=config['speaker_language'], device=device)
-
-    speaker_key, speaker_id = get_speaker_key(tts_model)
-    openvoice_speaker_checkpoint_file = f"{config['openvoice_base_speakers_path']}/ses/{speaker_key}.pth"
-
-    speaker_checkpoint = torch.load(openvoice_speaker_checkpoint_file, map_location=torch.device(device))
-    embedding_checkpoint = torch.load(openvoice_embedding_file).to(device)
-
-    def color_convert(input, output):
-        tone_color_converter = ToneColorConverter(
-            openvoice_converter_checkpoint_config_file, device=device
+    def init_tone_converter(self):
+        config_path = os.path.normpath(
+            os.path.join(self.config.converter_path(), "config.json")
         )
-        tone_color_converter.load_ckpt(openvoice_converter_checkpoint_file)
-        tone_color_converter.convert(
-            audio_src_path=input,
-            src_se=speaker_checkpoint,
-            tgt_se=embedding_checkpoint,
-            output_path=output,
+        model_path = os.path.normpath(
+            os.path.join(self.config.converter_path(), "checkpoint.pth")
         )
-    print("Model prepared")
-    return speaker_id, color_convert, tts_model
+        tone_color_converter = ToneColorConverter(config_path, device=self.device)
+        tone_color_converter.load_ckpt(model_path)
+
+        embedding_checkpoint = self.init_embedding_checkpoint()
+        speaker_model = self.init_speaker_model()
+
+        def tone_convert(audio):
+            return tone_color_converter.convert(
+                audio_src_path=audio, src_se=speaker_model, tgt_se=embedding_checkpoint
+            )
+
+        return tone_convert
+
+    def init_speaker_model(self):
+        model_path = os.path.normpath(
+            os.path.join(
+                self.config.speaker_path(), f"{self.config.speaker_model()}.pth"
+            )
+        )
+        return torch.load(model_path, map_location=torch.device(self.device))
+
+    def init_embedding_checkpoint(self):
+        embedding = f"{os.path.normpath(os.path.join(self.config.embedding_path(), self.config.embedding_model()))}.pth"
+        embedding_checkpoint = torch.load(embedding).to(self.device)
+        return embedding_checkpoint
+
+    def get_value_from_suffix(self, data, text):
+        text_lower = text.lower()
+        for key in data.__dict__:
+            suffix = key.split("-")[-1].lower()
+            if text_lower == suffix:
+                return data[key]
+        raise KeyError(f"No matching key suffix found for '{text}'")
+
+    def numpy_to_soundfile(
+        self, audio_data, sample_rate=44100, mode="w", format="WAV", subtype="PCM_16"
+    ):
+        # Create a SoundFile instance with the given audio data
+        sound_file = soundfile.SoundFile(
+            # FIXME: ?????
+            file=None,  # No file, create in-memory
+            mode=mode,
+            samplerate=sample_rate,
+            channels=(
+                audio_data.shape[1] if audio_data.ndim > 1 else 1
+            ),  # Stereo or Mono
+            format=format,
+            subtype=subtype,
+        )
+        sound_file.write(audio_data)  # Write the audio data into the SoundFile buffer
+        return sound_file
+
+    def convert(self, text, speed=1.0):
+        audio = self.numpy_to_soundfile(self.text_to_speech(text, speed=speed))
+        toned_audio = self.numpy_to_soundfile(self.tone_convert(audio))
+        return toned_audio
