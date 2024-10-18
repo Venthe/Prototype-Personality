@@ -193,13 +193,15 @@ class TextToSpeech:
     def convert(self, text, speed=1.0):
         audio_data, sampling_rate = self.__text_to_speech(text, speed=speed)
         
-        result, sampling_rate = self.__to_soundfile(audio_data, sampling_rate=sampling_rate)
         if self.__tone_convert is not None:
+            result, sampling_rate = self.__to_soundfile(audio_data, sampling_rate=sampling_rate)
             result, sampling_rate = self.__resample_audio(
                 result, self.__tone_converter_sampling_rate
             )
             result, sampling_rate = self.__to_soundfile(
                 self.__tone_convert(result), self.__tone_converter_sampling_rate
             )
+        else:
+            result, sampling_rate = self.__to_soundfile(audio_data, sampling_rate=sampling_rate)
         sound_file, _ = soundfile.read(result)
         return (sound_file, sampling_rate)

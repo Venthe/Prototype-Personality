@@ -12,6 +12,6 @@ def speak():
     print(tts.train_embedding("../../resources/training_data/reference.mp3", "../../resources/models/openvoice/embeddings"))
     tts.setup_prediction()
 
-    wav, sampling_rate = tts.convert("Cheese is here")
+    wav, sampling_rate = tts.convert("Cheese is here", speed=0.9)
     sounddevice.play(wav, sampling_rate)
     sounddevice.wait()
