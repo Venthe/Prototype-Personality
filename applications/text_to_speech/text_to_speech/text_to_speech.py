@@ -28,27 +28,76 @@ from python_utilities.cuda import detect_cuda
 import soundfile
 import io
 import numpy
+from openvoice import se_extractor
+import shutil
 
 
 class TextToSpeech:
     def __init__(self):
 
-        self.logger = logging.getLogger(__name__)
-        self.config = TextToSpeechConfig().openvoice
-        self.cuda_enabled = self.config.use_gpu() and detect_cuda()
+        self.__logger = logging.getLogger(__name__)
+        self.__config = TextToSpeechConfig().openvoice
+        self.__cuda_enabled = self.__config.use_gpu() and detect_cuda()
         # TODO: Allow the option to pick the proper device
-        self.device = "cuda:0" if self.cuda_enabled else "cpu"
+        self.__device = "cuda:0" if self.__cuda_enabled else "cpu"
 
-        self.text_to_speech = self.init_text_to_speech()
-        self.tone_convert = self.init_tone_converter()
+        self.__text_to_speech = self.__init_text_to_speech()
+        self.__tone_convert = None
+    
+    def init_tone_convert(self):
+        self.__tone_convert, self.__tone_converter = self.__init_tone_converter()
+    
+    def train_embedding(self, reference_file, target_dir = "./output", use_vad = True, clean=True):
+        if self.__tone_convert is None:
+            raise "Tone converter is not yet created"
 
-    def init_text_to_speech(self):
+        target_se, audio_name = se_extractor.get_se(
+            audio_path=reference_file,
+            vc_model=self.__tone_converter,
+            vad=use_vad,
+            target_dir=target_dir
+        )
+
+        self.__check_and_clean_directory(target_dir, clean)
+
+        generated_directory = os.path.join(target_dir, audio_name)
+        for item in os.listdir(generated_directory):
+            if item == "wavs":
+                continue
+            item_path = os.path.join(target_dir, audio_name, item)
+            shutil.move(item_path, target_dir)
+        
+        os.rmdir(generated_directory)
+
+        return target_se, audio_name
+
+
+    def __check_and_clean_directory(self, directory, clean=False):
+        # Check if the directory exists
+        if not os.path.exists(directory):
+            raise ValueError("The specified directory does not exist.")
+        
+        # Check if the directory is empty
+        if not os.listdir(directory):  # The directory is empty
+            return True
+
+        # The directory is not empty
+        if clean:
+            # Clean the directory by removing all contents
+            shutil.rmtree(directory)
+            os.makedirs(directory)  # Recreate the directory after cleaning
+            return True
+        else:
+            raise ValueError("The directory is not empty.")
+        
+
+    def __init_text_to_speech(self):
         tts_model = TTS(
-            language=self.config.language_model().upper(), device=self.device
+            language=self.__config.language_model().upper(), device=self.__device
         )
         speaker_ids = tts_model.hps.data.spk2id
-        self.logger.debug(f"Available speakers: {speaker_ids}")
-        speaker_id = self.get_value_from_suffix(speaker_ids, self.config.speaker_key())
+        self.__logger.debug(f"Available speakers: {speaker_ids}")
+        speaker_id = self.__get_value_from_suffix(speaker_ids, self.__config.speaker_key())
 
         def text_to_speech(text, speed=1.0):
             return (
@@ -58,40 +107,40 @@ class TextToSpeech:
 
         return text_to_speech
 
-    def init_tone_converter(self):
+    def __init_tone_converter(self):
         config_path = os.path.normpath(
-            os.path.join(self.config.converter_path(), "config.json")
+            os.path.join(self.__config.converter_path(), "config.json")
         )
         model_path = os.path.normpath(
-            os.path.join(self.config.converter_path(), "checkpoint.pth")
+            os.path.join(self.__config.converter_path(), "checkpoint.pth")
         )
-        tone_color_converter = ToneColorConverter(config_path, device=self.device)
+        tone_color_converter = ToneColorConverter(config_path, device=self.__device)
         tone_color_converter.load_ckpt(model_path)
 
-        embedding_checkpoint = self.init_embedding_checkpoint()
-        speaker_model = self.init_speaker_model()
+        embedding_checkpoint = self.__init_embedding_checkpoint()
+        speaker_model = self.__init_speaker_model()
 
         def tone_convert(audio):
             return tone_color_converter.convert(
                 audio_src_path=audio, src_se=speaker_model, tgt_se=embedding_checkpoint
             )
 
-        return tone_convert
+        return tone_convert, tone_color_converter
 
-    def init_speaker_model(self):
+    def __init_speaker_model(self):
         model_path = os.path.normpath(
             os.path.join(
-                self.config.speaker_path(), f"{self.config.speaker_model()}.pth"
+                self.__config.speaker_path(), f"{self.__config.speaker_model()}.pth"
             )
         )
-        return torch.load(model_path, map_location=torch.device(self.device))
+        return torch.load(model_path, map_location=torch.device(self.__device))
 
-    def init_embedding_checkpoint(self):
-        embedding = f"{os.path.normpath(os.path.join(self.config.embedding_path(), self.config.embedding_model()))}.pth"
-        embedding_checkpoint = torch.load(embedding).to(self.device)
+    def __init_embedding_checkpoint(self):
+        embedding = f"{os.path.normpath(os.path.join(self.__config.embedding_path(), self.__config.embedding_model()))}.pth"
+        embedding_checkpoint = torch.load(embedding).to(self.__device)
         return embedding_checkpoint
 
-    def get_value_from_suffix(self, data, text):
+    def __get_value_from_suffix(self, data, text):
         text_lower = text.lower()
         for key in data.__dict__:
             suffix = key.split("-")[-1].lower()
@@ -99,7 +148,7 @@ class TextToSpeech:
                 return data[key]
         raise KeyError(f"No matching key suffix found for '{text}'")
 
-    def to_soundfile(self, audio_data, sampling_rate=44100):
+    def __to_soundfile(self, audio_data, sampling_rate=44100):
         audio_buffer = io.BytesIO()
         soundfile.write(audio_buffer, audio_data, sampling_rate, format="WAV")
         audio_buffer.seek(0)       
@@ -107,8 +156,10 @@ class TextToSpeech:
         return audio_buffer
 
     def convert(self, text, speed=1.0):
-        audio_data, sampling_rate = self.text_to_speech(text, speed=speed)
-        _audio_buffer = self.to_soundfile(audio_data, sampling_rate=sampling_rate)
-        __audio_buffer = self.to_soundfile(self.tone_convert(_audio_buffer))
-        read_file, _ = soundfile.read(__audio_buffer)
-        return read_file, sampling_rate
+        audio_data, sampling_rate = self.__text_to_speech(text, speed=speed)
+        result = None
+        result = self.__to_soundfile(audio_data, sampling_rate=sampling_rate)
+        if self.__tone_convert is not None:
+            result = self.__to_soundfile(self.__tone_convert(result))
+        sound_file, _ = soundfile.read(result)
+        return sound_file, sampling_rate
