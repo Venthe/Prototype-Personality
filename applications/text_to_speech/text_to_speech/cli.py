@@ -8,6 +8,6 @@ def speak():
     setup_logging(TextToSpeechConfig().default.log_level())
 
     tts = TextToSpeech()
-    wav = tts.convert("text")
-    sounddevice.play(wav)
+    wav, sampling_rate = tts.convert("text")
+    sounddevice.play(wav, sampling_rate)
     sounddevice.wait()

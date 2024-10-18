@@ -1,7 +1,19 @@
+import warnings
+        
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r"^.*torch\.load.*weights_only=False.*$",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=r"^.*1Torch was not compiled with flash attention.*$",
+)
+
 import whisper
 import os
 import logging
-import warnings
 import numpy
 from .config import SpeechRecognitionConfig
 from python_utilities.cuda import detect_cuda
@@ -10,17 +22,6 @@ from python_utilities.cuda import detect_cuda
 class SpeechRecognition:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        
-        warnings.filterwarnings(
-            "ignore",
-            category=FutureWarning,
-            message=r"^.*torch\.load.*weights_only=False.*$",
-        )
-        warnings.filterwarnings(
-            "ignore",
-            category=UserWarning,
-            message=r"^.*1Torch was not compiled with flash attention.*$",
-        )
 
         # Configuration
         self.config = SpeechRecognitionConfig().whisper

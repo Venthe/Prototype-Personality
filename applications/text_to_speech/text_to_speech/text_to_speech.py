@@ -26,6 +26,8 @@ from melo.api import TTS
 from .config import TextToSpeechConfig
 from python_utilities.cuda import detect_cuda
 import soundfile
+import io
+import numpy
 
 
 class TextToSpeech:
@@ -49,7 +51,10 @@ class TextToSpeech:
         speaker_id = self.get_value_from_suffix(speaker_ids, self.config.speaker_key())
 
         def text_to_speech(text, speed=1.0):
-            return tts_model.tts_to_file(text, speed=speed, speaker_id=speaker_id)
+            return (
+                tts_model.tts_to_file(text, speed=speed, speaker_id=speaker_id),
+                tts_model.hps.data.sampling_rate,
+            )
 
         return text_to_speech
 
@@ -94,25 +99,28 @@ class TextToSpeech:
                 return data[key]
         raise KeyError(f"No matching key suffix found for '{text}'")
 
-    def numpy_to_soundfile(
-        self, audio_data, sample_rate=44100, mode="w", format="WAV", subtype="PCM_16"
-    ):
-        # Create a SoundFile instance with the given audio data
-        sound_file = soundfile.SoundFile(
-            # FIXME: ?????
-            file=None,  # No file, create in-memory
-            mode=mode,
-            samplerate=sample_rate,
-            channels=(
-                audio_data.shape[1] if audio_data.ndim > 1 else 1
-            ),  # Stereo or Mono
-            format=format,
-            subtype=subtype,
-        )
-        sound_file.write(audio_data)  # Write the audio data into the SoundFile buffer
-        return sound_file
+    def write(self, file, data, samplerate, subtype=None, endian=None, format=None,
+            closefd=True):
+        data = numpy.asarray(data)
+        if data.ndim == 1:
+            channels = 1
+        else:
+            channels = data.shape[1]
+        with soundfile.SoundFile(file, 'w', samplerate, channels,
+                    subtype, endian, format, closefd) as f:
+            f.write(data)
+            return f
+
+    def to_soundfile(self, audio_data, sampling_rate=44100):
+        audio_buffer = io.BytesIO()
+        soundfile.write(audio_buffer, audio_data, sampling_rate, format="WAV")
+        audio_buffer.seek(0)       
+
+        return audio_buffer
 
     def convert(self, text, speed=1.0):
-        audio = self.numpy_to_soundfile(self.text_to_speech(text, speed=speed))
-        toned_audio = self.numpy_to_soundfile(self.tone_convert(audio))
-        return toned_audio
+        audio_data, sampling_rate = self.text_to_speech(text, speed=speed)
+        _audio_buffer = self.to_soundfile(audio_data, sampling_rate=sampling_rate)
+        __audio_buffer = self.to_soundfile(self.tone_convert(_audio_buffer))
+        read_file, _ = soundfile.read(__audio_buffer)
+        return read_file, sampling_rate
