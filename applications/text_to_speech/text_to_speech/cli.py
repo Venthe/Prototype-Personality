@@ -8,10 +8,10 @@ def speak():
     setup_logging(TextToSpeechConfig().default.log_level())
 
     tts = TextToSpeech()
-    tts.init_tone_convert()
-    audio_name, target_se = tts.train_embedding("../../resources/training_data/reference.mp3", "output/")
+    tts.setup_training()
+    print(tts.train_embedding("../../resources/training_data/reference.mp3", "../../resources/models/openvoice/embeddings"))
+    tts.setup_prediction()
 
-    #wav, sampling_rate = tts.convert("Cheese is here")
-    #sounddevice.play(wav, sampling_rate)
-    #sounddevice.wait()
-    print(audio_name, target_se)
+    wav, sampling_rate = tts.convert("Cheese is here")
+    sounddevice.play(wav, sampling_rate)
+    sounddevice.wait()
